@@ -218,22 +218,30 @@ const develco = {
 
 export const definitions: DefinitionWithExtend[] = [
     {
-        zigbeeModel: ["SPLZB-131"],
-        model: "SPLZB-131",
-        vendor: "Develco",
-        description: "Power plug",
-        toZigbee: [tz.on_off],
-        ota: true,
-        extend: [
-            develcoModernExtend.addCustomClusterManuSpecificDevelcoGenBasic(),
-            develcoModernExtend.readGenBasicPrimaryVersions(),
-            develcoModernExtend.deviceTemperature(),
-            m.electricityMeter({acFrequency: true, fzMetering: develco.fz.metering, fzElectricalMeasurement: develco.fz.electrical_measurement}),
-            m.onOff(),
-        ],
-        endpoint: (device) => {
-            return {default: 2};
-        },
+            zigbeeModel: ["SPLZB-131"],
+            model: "SPLZB-131",
+            vendor: "Develco",
+            description: "Power plug v2",
+            fromZigbee: [fz.on_off, develcoElectricalMeasurement, develcoMetering],
+            toZigbee: [tz.on_off],
+            ota: true,
+            exposes: [e.switch(), e.power(), e.current(), e.voltage(), e.energy(), e.ac_frequency()],
+            extend: [develcoModernExtend.addCustomClusterManuSpecificDevelcoGenBasic(), develcoModernExtend.readGenBasicPrimaryVersions()],
+            configure: async (device, coordinatorEndpoint) => {
+                const endpoint = device.getEndpoint(2);
+                await reporting.bind(endpoint, coordinatorEndpoint, ["genOnOff", "haElectricalMeasurement", "seMetering"]);
+                await reporting.onOff(endpoint);
+                await reporting.readEletricalMeasurementMultiplierDivisors(endpoint);
+                await reporting.activePower(endpoint);
+                await reporting.rmsCurrent(endpoint);
+                await reporting.rmsVoltage(endpoint);
+                await reporting.readMeteringMultiplierDivisor(endpoint);
+                await reporting.currentSummDelivered(endpoint);
+                await reporting.acFrequency(endpoint);
+            },
+            endpoint: (device) => {
+                return {default: 2};
+            },
     },
     {
         zigbeeModel: ["SPLZB-132"],
